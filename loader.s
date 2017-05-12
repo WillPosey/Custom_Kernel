@@ -1,33 +1,37 @@
-.set BL_MAGIC, 0x1BADB002
-.set FLAGS, (1<<0 | 1<<1)
-.set CHECKSUM, -(BL_MAGIC + FLAGS)
+.intel_syntax noprefix
+.set MAGIC,                 0x1badb002 
+.set BOOT_MODULES_ALIGNED,  (1<<0)
+.set MEMINFO,               (1<<1)  
+.set VIDEOINFO,             (0<<2)  # Graphics fields of the multiboot header
+.set FLAGS,                 (BOOT_MODULES_ALIGNED | MEMINFO | VIDEOINFO)
+.set CHECKSUM,              -(MAGIC + FLAGS)
+.set STACK_SIZE,            2*2014*1024
+
+.extern kernel_main         # Extern to be seen from _this_ file at link-time
+.global kernel_loader       # Made global to be seen at link-time
 
 
-# Magic for bootloader to recognize our image
+# GRUB(legacy/2) can boot mutliboot-compatible kernels; make us compatible
 .section .multiboot
-    .long BL_MAGIC
+    .long MAGIC
     .long FLAGS
     .long CHECKSUM
 
 
 .section .text
-.extern kernel_main
-.global loader
-
-# Bootloader copies multiboot pointer to EAX and magic number to EBX
-loader:
-    mov $kernel_stack, %esp
-    push %eax   # Push to the stack for bookkeeping
-    push %ebx
+kernel_loader:
+    mov esp, kernel_stack
+    push eax
+    push ebx
     call kernel_main
 
-_stop:
+_exit_loop:
     cli
     hlt
-    jmp _stop
+    jmp _exit_loop
 
 
 .section .bss
-.space 2*1024*1024; #2MiB for stack
-kernel_stack:
-
+.align 4            # Stack is word-aligned
+.space STACK_SIZE   # 2MiB for stack
+kernel_stack:       # Stack grows up from here?
