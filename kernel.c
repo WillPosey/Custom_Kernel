@@ -4,8 +4,9 @@
 
 void printf(char *str)
 {
+    int i;
     volatile uint16_t *videomem = (uint16_t*) 0xb8000;
-    for(int i=0; str[i] != '\0'; i++){
+    for(i=0; str[i] != '\0'; i++){
         videomem[i] = 0x0700 | str[i];
     }
 }
